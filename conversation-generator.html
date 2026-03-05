@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phone Conversation Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF9;
+    --surface: #FFFFFF;
+    --surface-alt: #F5F4F1;
+    --border: #E8E6E1;
+    --border-focus: #B8B5AD;
+    --text: #1C1B18;
+    --text-secondary: #6B6960;
+    --text-tertiary: #9C9889;
+    --accent: #2D2A24;
+    --accent-hover: #3D3A34;
+    --accent-subtle: #E8E6E1;
+    --success: #3D7A4A;
+    --error: #B84233;
+    --warning: #C4890C;
+    --radius: 10px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.08);
+    --sidebar-width: 280px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 24px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .sidebar-toggle {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+  }
+
+  .sidebar-toggle:hover {
+    background: var(--surface-alt);
+    color: var(--text);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .settings-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .settings-btn:hover {
+    border-color: var(--border-focus);
+    color: var(--text);
+    background: var(--surface-alt);
+  }
+
+  .key-status {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--error);
+    display: inline-block;
+  }
+
+  .key-status.active { background: var(--success); }
+
+  /* ── Sidebar ── */
+  .app-layout {
+    display: flex;
+    min-height: calc(100vh - 73px);
+  }
+
+  .sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: margin-left 0.25s ease, opacity 0.25s ease;
+    overflow: hidden;
+  }
+
+  .sidebar.collapsed {
+    margin-left: calc(-1 * var(--sidebar-width));
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sidebar-header h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-secondary);
+  }
+
+  .new-convo-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .new-convo-btn:hover {
+    background: var(--surface-alt);
+    color: var(--text);
+    border-color: var(--border-focus);
+  }
+
+  .sidebar-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .sidebar-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .history-item {
+    padding: 12px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.1s;
+    margin-bottom: 2px;
+    position: relative;
+  }
+
+  .history-item:hover { background: var(--surface-alt); }
+
+  .history-item.active {
+    background: var(--surface-alt);
+    outline: 1px solid var(--border);
+  }
+
+  .history-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    padding-right: 24px;
+  }
+
+  .history-item-meta {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .history-item-speakers {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-item-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-tertiary);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+  }
+
+  .history-item:hover .history-item-delete { display: flex; }
+  .history-item-delete:hover { background: #FDF2F0; color: var(--error); }
+
+  .history-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+
+  .history-badge.has-audio { background: #E8F5E9; color: var(--success); }
+  .history-badge.draft { background: var(--surface-alt); color: var(--text-tertiary); border: 1px solid var(--border); }
+
+  /* ── Main content ── */
+  .main-content { flex: 1; min-width: 0; }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── Steps ── */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    transition: color 0.2s;
+  }
+
+  .step.active { color: var(--text); }
+  .step.done { color: var(--success); }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .step.active .step-num { background: var(--accent); color: white; border-color: var(--accent); }
+  .step.done .step-num { background: var(--success); color: white; border-color: var(--success); }
+
+  .step-line { width: 40px; height: 1px; background: var(--border); margin: 0 12px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    letter-spacing: -0.2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title .badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    background: var(--surface-alt);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  /* ── Forms ── */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+  label { font-size: 12px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.2px; }
+
+  input, textarea, select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    transition: all 0.15s;
+    outline: none;
+  }
+
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,42,36,0.06); }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  select { cursor: pointer; }
+
+  .speakers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .speaker-card { background: var(--surface-alt); border-radius: 8px; padding: 20px; }
+
+  .speaker-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-tertiary);
+    margin-bottom: 14px;
+  }
+
+  .speaker-card .form-group { margin-bottom: 12px; }
+  .speaker-card .form-group:last-child { margin-bottom: 0; }
+  .speaker-card input, .speaker-card textarea { background: var(--surface); }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    padding: 10px 24px; border-radius: 8px; cursor: pointer;
+    transition: all 0.15s; border: none;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--surface-alt); border-color: var(--border-focus); }
+  .btn-danger { background: var(--surface); color: var(--error); border: 1px solid var(--border); }
+  .btn-danger:hover { background: #FDF2F0; border-color: var(--error); }
+
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+  /* ── Conversation Editor ── */
+  .conversation-editor {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.8; min-height: 300px;
+    white-space: pre-wrap; padding: 16px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface-alt);
+  }
+
+  .turn {
+    padding: 10px 14px; margin-bottom: 8px; border-radius: 8px;
+    border-left: 3px solid var(--border); background: var(--surface);
+  }
+
+  .turn .speaker-name {
+    font-weight: 600; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px; color: var(--text-secondary);
+  }
+
+  .turn:nth-child(odd) { border-left-color: var(--accent); }
+  .turn:nth-child(even) { border-left-color: var(--text-tertiary); }
+
+  /* ── Audio ── */
+  .audio-section { text-align: center; padding: 40px 20px; }
+  .audio-section audio { width: 100%; max-width: 500px; margin: 20px 0; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+    z-index: 100; justify-content: center; align-items: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface); border-radius: 12px; padding: 32px;
+    width: 90%; max-width: 480px; box-shadow: var(--shadow-lg);
+    animation: modalIn 0.2s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 20px; letter-spacing: -0.2px; }
+  .modal .form-group { margin-bottom: 16px; }
+  .modal .actions { margin-top: 24px; }
+
+  /* ── Loading ── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+    border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block;
+  }
+
+  .spinner.dark { border-color: rgba(0,0,0,0.1); border-top-color: var(--text); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding: 60px 20px; color: var(--text-secondary); font-size: 14px;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    box-shadow: var(--shadow-lg); z-index: 200; animation: toastIn 0.25s ease; max-width: 360px;
+  }
+
+  .toast.error { background: #B84233; color: white; }
+  .toast.success { background: var(--success); color: white; }
+  .toast.info { background: var(--accent); color: white; }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section { display: none; }
+  .section.visible { display: block; }
+
+  @media (max-width: 768px) {
+    header { padding: 16px 20px; }
+    .container { padding: 24px 16px 60px; }
+    .speakers-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .step span { display: none; }
+    .sidebar { position: fixed; left: 0; top: 73px; bottom: 0; z-index: 60; box-shadow: var(--shadow-lg); }
+    .sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-width)); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle history">☰</button>
+    <div class="logo">
+      <div class="logo-icon">☎</div>
+      Conversation Generator
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="settings-btn" onclick="openSettings()">
+      <span class="key-status" id="keyStatus"></span>
+      API Keys
+    </button>
+  </div>
+</header>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>History</h3>
+      <button class="new-convo-btn" onclick="newConversation()" title="New conversation">+</button>
+    </div>
+    <div class="sidebar-list" id="historyList">
+      <div class="sidebar-empty">No saved conversations yet. Generate one to get started.</div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="container">
+      <div class="step-indicator">
+        <div class="step active" id="step1"><div class="step-num">1</div><span>Setup</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="step2"><div class="step-num">2</div><span>Edit Draft</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="step3"><div class="step-num">3</div><span>Generate Audio</span></div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="section visible" id="sectionSetup">
+        <div class="card">
+          <div class="card-title">Scenario</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Topic</label>
+              <input type="text" id="topic" placeholder="e.g. Job interview for a marketing role">
+            </div>
+            <div class="form-group">
+              <label>Language</label>
+              <select id="language">
+                <option value="English">English</option>
+                <option value="Danish">Danish</option>
+                <option value="German">German</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row single">
+            <div class="form-group">
+              <label>Context / Instructions</label>
+              <textarea id="context" placeholder="Describe the situation, tone, goals of the conversation..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Conversation Partners</div>
+          <div class="speakers-grid">
+            <div class="speaker-card">
+              <div class="speaker-label">Speaker A</div>
+              <div class="form-group"><label>Name</label><input type="text" id="nameA" placeholder="e.g. Maria"></div>
+              <div class="form-group"><label>Role</label><input type="text" id="roleA" placeholder="e.g. HR Manager"></div>
+              <div class="form-group">
+                <label>Voice</label>
+                <select id="voiceA">
+                  <optgroup label="English">
+                    <option value="Xb7hH8MSUJpSbSDYk0k2">Alice — Female, British, confident</option>
+                    <option value="onwK4e9ZLuTAKqWW03F9">Daniel — Male, British, authoritative</option>
+                  </optgroup>
+                  <optgroup label="Danish">
+                    <option value="4RklGmuxoAskAbGXplXN">Camilla — Female, light, professional</option>
+                    <option value="ZKutKtutnlbOxDxkNlhk">Sissel — Female, warm, storytelling</option>
+                    <option value="V34B5u5UbLdNJVEkcgXp">Noam — Male, energetic, engaging</option>
+                    <option value="C43bq5qXRueL1cBQEOt3">Thomas — Male, warm, narration</option>
+                  </optgroup>
+                  <optgroup label="Multilingual">
+                    <option value="XB0fDUnXU5powFXDhCwa">Charlotte — Female, Swedish, expressive</option>
+                    <option value="nPczCjzI2devNBz1zQrb">Brian — Male, American, deep</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="form-group"><label>Personality & Description</label><textarea id="descA" placeholder="Friendly, professional, asks probing questions..."></textarea></div>
+            </div>
+            <div class="speaker-card">
+              <div class="speaker-label">Speaker B</div>
+              <div class="form-group"><label>Name</label><input type="text" id="nameB" placeholder="e.g. Thomas"></div>
+              <div class="form-group"><label>Role</label><input type="text" id="roleB" placeholder="e.g. Job Applicant"></div>
+              <div class="form-group">
+                <label>Voice</label>
+                <select id="voiceB">
+                  <optgroup label="English">
+                    <option value="Xb7hH8MSUJpSbSDYk0k2">Alice — Female, British, confident</option>
+                    <option value="onwK4e9ZLuTAKqWW03F9" selected>Daniel — Male, British, authoritative</option>
+                  </optgroup>
+                  <optgroup label="Danish">
+                    <option value="4RklGmuxoAskAbGXplXN">Camilla — Female, light, professional</option>
+                    <option value="ZKutKtutnlbOxDxkNlhk">Sissel — Female, warm, storytelling</option>
+                    <option value="V34B5u5UbLdNJVEkcgXp">Noam — Male, energetic, engaging</option>
+                    <option value="C43bq5qXRueL1cBQEOt3">Thomas — Male, warm, narration</option>
+                  </optgroup>
+                  <optgroup label="Multilingual">
+                    <option value="XB0fDUnXU5powFXDhCwa">Charlotte — Female, Swedish, expressive</option>
+                    <option value="nPczCjzI2devNBz1zQrb">Brian — Male, American, deep</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="form-group"><label>Personality & Description</label><textarea id="descB" placeholder="Nervous but enthusiastic, gives detailed answers..."></textarea></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateConversation()">Generate Conversation Draft</button>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="section" id="sectionEdit">
+        <div class="card">
+          <div class="card-title">Conversation Draft <span class="badge">editable</span></div>
+          <div id="conversationDisplay"></div>
+          <textarea class="conversation-editor" id="conversationRaw" style="display:none;"></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;">
+            <button class="btn btn-secondary" onclick="toggleRawEdit()" id="toggleEditBtn">Edit as text</button>
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+              <button class="btn btn-primary" onclick="generateAudio()">Generate Audio →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="section" id="sectionAudio">
+        <div class="card">
+          <div id="audioContent">
+            <div class="loading-state" id="audioLoading">
+              <div class="spinner dark"></div>
+              <span>Generating audio with ElevenLabs...</span>
+              <span id="audioProgress" style="font-size:12px; color:var(--text-tertiary);">Preparing...</span>
+            </div>
+            <div class="audio-section" id="audioResult" style="display:none;">
+              <div style="font-size:48px; margin-bottom:16px;">🎧</div>
+              <div style="font-size:16px; font-weight:600; margin-bottom:4px;">Your conversation is ready</div>
+              <div style="font-size:13px; color:var(--text-secondary); margin-bottom:24px;" id="audioDuration"></div>
+              <audio controls id="audioPlayer"></audio>
+              <div class="actions" style="justify-content:center; margin-top:24px;">
+                <button class="btn btn-secondary" onclick="goToStep(2)">← Edit Draft</button>
+                <button class="btn btn-secondary" onclick="downloadAudio()">Download MP3</button>
+                <button class="btn btn-primary" onclick="newConversation()">New Conversation</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h3>API Keys</h3>
+    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:20px;">
+      Keys are stored in your browser's localStorage and never sent anywhere except the respective APIs.
+    </p>
+    <div class="form-group">
+      <label>Anthropic API Key <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--accent); text-decoration:underline; font-weight:400;">Get key →</a></label>
+      <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+    </div>
+    <div class="form-group">
+      <label>ElevenLabs API Key <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener" style="color:var(--accent); text-decoration:underline; font-weight:400;">Get key →</a></label>
+      <input type="password" id="elevenKey" placeholder="sk_...">
+    </div>
+    <div class="actions">
+      <button class="btn btn-danger" onclick="clearKeys()">Clear Keys</button>
+      <button class="btn btn-primary" onclick="saveKeys()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete Conversation</h3>
+    <p style="font-size:14px; color:var(--text-secondary); margin-bottom:8px;">Are you sure? This cannot be undone.</p>
+    <p style="font-size:13px; font-weight:500; color:var(--text);" id="deleteConvoName"></p>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ══════════════════════════════════════
+  // State
+  // ══════════════════════════════════════
+  let conversationData = [];
+  let audioBlob = null;
+  let rawEditMode = false;
+  let currentConvoId = null;
+  let pendingDeleteId = null;
+
+  const STORAGE_KEY = 'convo_generator_history';
+
+  // ══════════════════════════════════════
+  // Init
+  // ══════════════════════════════════════
+  document.addEventListener('DOMContentLoaded', () => {
+    updateKeyStatus();
+    renderHistory();
+  });
+
+  // ══════════════════════════════════════
+  // History / State Management
+  // ══════════════════════════════════════
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function saveHistory(history) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  }
+
+  function saveCurrentConversation() {
+    const topic = document.getElementById('topic').value.trim();
+    const language = document.getElementById('language').value;
+    const context = document.getElementById('context').value.trim();
+    const nameA = document.getElementById('nameA').value.trim() || 'Speaker A';
+    const roleA = document.getElementById('roleA').value.trim();
+    const descA = document.getElementById('descA').value.trim();
+    const voiceA = document.getElementById('voiceA').value;
+    const nameB = document.getElementById('nameB').value.trim() || 'Speaker B';
+    const roleB = document.getElementById('roleB').value.trim();
+    const descB = document.getElementById('descB').value.trim();
+    const voiceB = document.getElementById('voiceB').value;
+
+    if (!topic && conversationData.length === 0) return null;
+
+    const history = getHistory();
+    const now = new Date().toISOString();
+
+    const convo = {
+      id: currentConvoId || 'convo_' + Date.now(),
+      topic, language, context,
+      speakerA: { name: nameA, role: roleA, description: descA, voice: voiceA },
+      speakerB: { name: nameB, role: roleB, description: descB, voice: voiceB },
+      conversation: conversationData,
+      hasAudio: !!audioBlob,
+      createdAt: null,
+      updatedAt: now
+    };
+
+    const existingIdx = history.findIndex(h => h.id === convo.id);
+    if (existingIdx >= 0) {
+      convo.createdAt = history[existingIdx].createdAt;
+      history[existingIdx] = convo;
+    } else {
+      convo.createdAt = now;
+      history.unshift(convo);
+    }
+
+    currentConvoId = convo.id;
+    saveHistory(history);
+    renderHistory();
+    return convo.id;
+  }
+
+  function loadConversation(id) {
+    const history = getHistory();
+    const convo = history.find(h => h.id === id);
+    if (!convo) return;
+
+    currentConvoId = convo.id;
+    audioBlob = null;
+    rawEditMode = false;
+
+    document.getElementById('topic').value = convo.topic || '';
+    document.getElementById('language').value = convo.language || 'English';
+    document.getElementById('context').value = convo.context || '';
+    document.getElementById('nameA').value = convo.speakerA?.name || '';
+    document.getElementById('roleA').value = convo.speakerA?.role || '';
+    document.getElementById('descA').value = convo.speakerA?.description || '';
+    document.getElementById('voiceA').value = convo.speakerA?.voice || 'Xb7hH8MSUJpSbSDYk0k2';
+    document.getElementById('nameB').value = convo.speakerB?.name || '';
+    document.getElementById('roleB').value = convo.speakerB?.role || '';
+    document.getElementById('descB').value = convo.speakerB?.description || '';
+    document.getElementById('voiceB').value = convo.speakerB?.voice || 'onwK4e9ZLuTAKqWW03F9';
+
+    conversationData = convo.conversation || [];
+
+    if (conversationData.length > 0) {
+      renderConversation();
+      goToStep(2);
+    } else {
+      goToStep(1);
+    }
+
+    renderHistory();
+  }
+
+  function newConversation() {
+    currentConvoId = null;
+    conversationData = [];
+    audioBlob = null;
+    rawEditMode = false;
+
+    document.getElementById('topic').value = '';
+    document.getElementById('language').value = 'English';
+    document.getElementById('context').value = '';
+    document.getElementById('nameA').value = '';
+    document.getElementById('roleA').value = '';
+    document.getElementById('descA').value = '';
+    document.getElementById('voiceA').value = 'Xb7hH8MSUJpSbSDYk0k2';
+    document.getElementById('nameB').value = '';
+    document.getElementById('roleB').value = '';
+    document.getElementById('descB').value = '';
+    document.getElementById('voiceB').value = 'onwK4e9ZLuTAKqWW03F9';
+
+    goToStep(1);
+    renderHistory();
+  }
+
+  function promptDelete(id, e) {
+    e.stopPropagation();
+    const history = getHistory();
+    const convo = history.find(h => h.id === id);
+    if (!convo) return;
+    pendingDeleteId = id;
+    document.getElementById('deleteConvoName').textContent = convo.topic || 'Untitled conversation';
+    document.getElementById('deleteModal').classList.add('open');
+  }
+
+  function closeDeleteModal() {
+    pendingDeleteId = null;
+    document.getElementById('deleteModal').classList.remove('open');
+  }
+
+  function confirmDelete() {
+    if (!pendingDeleteId) return;
+    let history = getHistory();
+    history = history.filter(h => h.id !== pendingDeleteId);
+    saveHistory(history);
+    if (currentConvoId === pendingDeleteId) newConversation();
+    closeDeleteModal();
+    renderHistory();
+    showToast('Conversation deleted', 'info');
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const history = getHistory();
+
+    if (history.length === 0) {
+      list.innerHTML = '<div class="sidebar-empty">No saved conversations yet. Generate one to get started.</div>';
+      return;
+    }
+
+    list.innerHTML = history.map(convo => {
+      const isActive = convo.id === currentConvoId;
+      const date = new Date(convo.updatedAt);
+      const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      const speakers = [convo.speakerA?.name, convo.speakerB?.name].filter(Boolean).join(' & ') || 'No speakers';
+      const turns = convo.conversation?.length || 0;
+      const statusBadge = turns > 0
+        ? (convo.hasAudio
+          ? '<span class="history-badge has-audio">audio</span>'
+          : '<span class="history-badge draft">draft</span>')
+        : '';
+
+      return `
+        <div class="history-item ${isActive ? 'active' : ''}" onclick="loadConversation('${convo.id}')">
+          <div class="history-item-title">${escapeHtml(convo.topic || 'Untitled')}</div>
+          <div class="history-item-meta">
+            <span>${dateStr}</span>
+            <span class="history-item-speakers">${escapeHtml(speakers)}</span>
+            ${statusBadge}
+          </div>
+          <button class="history-item-delete" onclick="promptDelete('${convo.id}', event)" title="Delete">✕</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ══════════════════════════════════════
+  // Sidebar
+  // ══════════════════════════════════════
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
+
+  // ══════════════════════════════════════
+  // Settings / Keys
+  // ══════════════════════════════════════
+  function openSettings() {
+    document.getElementById('anthropicKey').value = localStorage.getItem('anthropic_key') || '';
+    document.getElementById('elevenKey').value = localStorage.getItem('eleven_key') || '';
+    document.getElementById('settingsModal').classList.add('open');
+  }
+
+  function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
+
+  function saveKeys() {
+    localStorage.setItem('anthropic_key', document.getElementById('anthropicKey').value.trim());
+    localStorage.setItem('eleven_key', document.getElementById('elevenKey').value.trim());
+    updateKeyStatus();
+    closeSettings();
+    showToast('API keys saved', 'success');
+  }
+
+  function clearKeys() {
+    localStorage.removeItem('anthropic_key');
+    localStorage.removeItem('eleven_key');
+    document.getElementById('anthropicKey').value = '';
+    document.getElementById('elevenKey').value = '';
+    updateKeyStatus();
+    showToast('Keys cleared', 'info');
+  }
+
+  function getAnthropicKey() { return localStorage.getItem('anthropic_key') || ''; }
+  function getElevenKey() { return localStorage.getItem('eleven_key') || ''; }
+
+  function updateKeyStatus() {
+    const has = getAnthropicKey() && getElevenKey();
+    document.getElementById('keyStatus').className = 'key-status' + (has ? ' active' : '');
+  }
+
+  document.getElementById('settingsModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('settingsModal')) closeSettings();
+  });
+  document.getElementById('deleteModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
+  });
+
+  // ══════════════════════════════════════
+  // Steps
+  // ══════════════════════════════════════
+  function goToStep(n) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('.step').forEach(s => { s.classList.remove('active', 'done'); });
+    for (let i = 1; i < n; i++) document.getElementById('step' + i).classList.add('done');
+    document.getElementById('step' + n).classList.add('active');
+    if (n === 1) document.getElementById('sectionSetup').classList.add('visible');
+    if (n === 2) document.getElementById('sectionEdit').classList.add('visible');
+    if (n === 3) document.getElementById('sectionAudio').classList.add('visible');
+  }
+
+  // ══════════════════════════════════════
+  // Generate Conversation (Anthropic)
+  // ══════════════════════════════════════
+  async function generateConversation() {
+    const key = getAnthropicKey();
+    if (!key) { openSettings(); showToast('Please add your Anthropic API key first', 'error'); return; }
+
+    const topic = document.getElementById('topic').value.trim();
+    const language = document.getElementById('language').value;
+    const context = document.getElementById('context').value.trim();
+    const nameA = document.getElementById('nameA').value.trim() || 'Speaker A';
+    const roleA = document.getElementById('roleA').value.trim();
+    const descA = document.getElementById('descA').value.trim();
+    const nameB = document.getElementById('nameB').value.trim() || 'Speaker B';
+    const roleB = document.getElementById('roleB').value.trim();
+    const descB = document.getElementById('descB').value.trim();
+
+    if (!topic) { showToast('Please enter a topic', 'error'); return; }
+
+    const btn = document.querySelector('#sectionSetup .btn-primary');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    btn.disabled = true;
+
+    const prompt = `Generate a realistic phone conversation in ${language} between two people.
+
+Topic: ${topic}
+${context ? `Context: ${context}` : ''}
+
+Speaker A:
+- Name: ${nameA}
+${roleA ? `- Role: ${roleA}` : ''}
+${descA ? `- Personality: ${descA}` : ''}
+
+Speaker B:
+- Name: ${nameB}
+${roleB ? `- Role: ${roleB}` : ''}
+${descB ? `- Personality: ${descB}` : ''}
+
+Generate a natural, flowing phone conversation with 10-20 turns. Include realistic phone greetings and a natural ending.
+
+IMPORTANT: Return ONLY a JSON array with no other text. Each element should be:
+{"speaker": "A" or "B", "name": "speaker name", "text": "what they say"}
+
+Return ONLY the JSON array, no markdown, no backticks, no explanation.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `API error ${res.status}`);
+      }
+
+      const data = await res.json();
+      const text = data.content.map(c => c.text || '').join('');
+
+      let cleaned = text.trim();
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      }
+
+      conversationData = JSON.parse(cleaned);
+      renderConversation();
+      saveCurrentConversation();
+      goToStep(2);
+
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+    } finally {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
+  }
+
+  // ══════════════════════════════════════
+  // Render Conversation
+  // ══════════════════════════════════════
+  function renderConversation() {
+    const container = document.getElementById('conversationDisplay');
+    container.innerHTML = '';
+
+    conversationData.forEach((turn, i) => {
+      const div = document.createElement('div');
+      div.className = 'turn';
+      div.innerHTML = `
+        <div class="speaker-name">${escapeHtml(turn.name)} (${turn.speaker})</div>
+        <div class="turn-text" contenteditable="true" data-index="${i}"
+             style="outline:none; font-size:14px; line-height:1.6;">${escapeHtml(turn.text)}</div>
+      `;
+      container.appendChild(div);
+    });
+
+    container.querySelectorAll('.turn-text').forEach(el => {
+      el.addEventListener('blur', () => {
+        const idx = parseInt(el.dataset.index);
+        conversationData[idx].text = el.textContent;
+        saveCurrentConversation();
+      });
+    });
+
+    const rawText = conversationData.map(t => `${t.name}: ${t.text}`).join('\n\n');
+    document.getElementById('conversationRaw').value = rawText;
+  }
+
+  function toggleRawEdit() {
+    rawEditMode = !rawEditMode;
+    const display = document.getElementById('conversationDisplay');
+    const raw = document.getElementById('conversationRaw');
+    const btn = document.getElementById('toggleEditBtn');
+
+    if (rawEditMode) {
+      raw.value = conversationData.map(t => `${t.name}: ${t.text}`).join('\n\n');
+      display.style.display = 'none';
+      raw.style.display = 'block';
+      btn.textContent = 'Visual editor';
+    } else {
+      parseRawText(raw.value);
+      renderConversation();
+      saveCurrentConversation();
+      display.style.display = 'block';
+      raw.style.display = 'none';
+      btn.textContent = 'Edit as text';
+    }
+  }
+
+  function parseRawText(text) {
+    const nameA = document.getElementById('nameA').value.trim() || 'Speaker A';
+    const nameB = document.getElementById('nameB').value.trim() || 'Speaker B';
+    const lines = text.split('\n\n').filter(l => l.trim());
+    conversationData = lines.map(line => {
+      const colonIdx = line.indexOf(':');
+      if (colonIdx > 0) {
+        const name = line.substring(0, colonIdx).trim();
+        const txt = line.substring(colonIdx + 1).trim();
+        const speaker = name.toLowerCase() === nameB.toLowerCase() ? 'B' : 'A';
+        return { speaker, name, text: txt };
+      }
+      return { speaker: 'A', name: nameA, text: line.trim() };
+    });
+  }
+
+  // ══════════════════════════════════════
+  // Generate Audio (ElevenLabs)
+  // ══════════════════════════════════════
+  async function generateAudio() {
+    const key = getElevenKey();
+    if (!key) { openSettings(); showToast('Please add your ElevenLabs API key first', 'error'); return; }
+
+    goToStep(3);
+    document.getElementById('audioLoading').style.display = 'flex';
+    document.getElementById('audioResult').style.display = 'none';
+
+    const progressEl = document.getElementById('audioProgress');
+    const audioChunks = [];
+
+    try {
+      for (let i = 0; i < conversationData.length; i++) {
+        const turn = conversationData[i];
+        progressEl.textContent = `Generating turn ${i + 1} of ${conversationData.length}...`;
+        const voiceId = turn.speaker === 'A'
+          ? document.getElementById('voiceA').value
+          : document.getElementById('voiceB').value;
+
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'xi-api-key': key, 'Authorization': 'Bearer ' + key },
+          body: JSON.stringify({
+            text: turn.text,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.0, use_speaker_boost: true }
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail?.message || `ElevenLabs error ${res.status}`);
+        }
+
+        audioChunks.push(await res.blob());
+      }
+
+      progressEl.textContent = 'Merging audio...';
+      audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(audioBlob);
+      const player = document.getElementById('audioPlayer');
+      player.src = url;
+
+      player.addEventListener('loadedmetadata', () => {
+        const dur = Math.round(player.duration);
+        const mins = Math.floor(dur / 60);
+        const secs = dur % 60;
+        document.getElementById('audioDuration').textContent =
+          `${conversationData.length} turns · ${mins}:${secs.toString().padStart(2, '0')}`;
+      }, { once: true });
+
+      document.getElementById('audioLoading').style.display = 'none';
+      document.getElementById('audioResult').style.display = 'block';
+      saveCurrentConversation();
+      showToast('Audio generated successfully!', 'success');
+
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+      goToStep(2);
+    }
+  }
+
+  function downloadAudio() {
+    if (!audioBlob) return;
+    const topic = document.getElementById('topic').value.trim() || 'conversation';
+    const safeName = topic.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_').substring(0, 40);
+    const url = URL.createObjectURL(audioBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}.mp3`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ══════════════════════════════════════
+  // Utilities
+  // ══════════════════════════════════════
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function showToast(message, type = 'info') {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  }
+</script>
+</body>
+</html>

@@ -47,13 +47,12 @@ title: tools.mags.nu
   </div>
 
   <ul class="tool-list">
-    {% assign tool_pages = site.pages | where_exp: "p", "p.path != 'index.html'" | where_exp: "p", "p.name != '404.html'" | where_exp: "p", "p.path contains '.html'" | sort: "title" %}
-    {% if tool_pages.size > 0 %}
-      {% for page in tool_pages %}
+    {% if site.data.tools.size > 0 %}
+      {% for tool in site.data.tools %}
         <li>
-          <a href="{{ page.url | relative_url }}">{{ page.title | default: page.name | replace: '.html', '' | replace: '-', ' ' | replace: '_', ' ' }}</a>
-          {% if page.description %}
-            <div class="tool-description">{{ page.description }}</div>
+          <a href="{{ tool.url | relative_url }}">{{ tool.title }}</a>
+          {% if tool.description %}
+            <div class="tool-description">{{ tool.description }}</div>
           {% endif %}
         </li>
       {% endfor %}
