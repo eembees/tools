@@ -1,0 +1,10 @@
+title: tools.mags.nu
+description: Useful tools by Magnus Berg Sletfjerding
+theme: jekyll-theme-primer
+
+# Don't process these as Jekyll pages
+exclude:
+  - README.md
+  - Makefile
+  - "*.sh"
+  - node_modules
