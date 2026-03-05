@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Phone Conversation Generator</title>
+<meta name="description" content="Generate scripted two-speaker phone conversations with customisable voices, roles, and topics.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1148,7 +1149,7 @@ Return ONLY the JSON array, no markdown, no backticks, no explanation.`;
 
         const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'xi-api-key': key, 'Authorization': 'Bearer ' + key },
+          headers: { 'Content-Type': 'application/json', 'xi-api-key': key},
           body: JSON.stringify({
             text: turn.text,
             model_id: 'eleven_multilingual_v2',
