@@ -678,6 +678,7 @@
               <div class="actions" style="justify-content:center; margin-top:24px;">
                 <button class="btn btn-secondary" onclick="goToStep(2)">← Edit Draft</button>
                 <button class="btn btn-secondary" onclick="downloadAudio()">Download MP3</button>
+                <button class="btn btn-secondary" id="downloadDiarizedBtn" onclick="downloadDiarized()">Download Diarized WAV</button>
                 <button class="btn btn-primary" onclick="newConversation()">New Conversation</button>
               </div>
             </div>
@@ -729,6 +730,7 @@
   // ══════════════════════════════════════
   let conversationData = [];
   let audioBlob = null;
+  let audioChunkData = []; // [{blob, speaker}] for diarized export
   let rawEditMode = false;
   let currentConvoId = null;
   let pendingDeleteId = null;
@@ -1146,6 +1148,7 @@ Return ONLY the JSON array, no markdown, no backticks, no explanation.`;
 
     const progressEl = document.getElementById('audioProgress');
     const audioChunks = [];
+    audioChunkData = [];
 
     try {
       for (let i = 0; i < conversationData.length; i++) {
@@ -1170,7 +1173,9 @@ Return ONLY the JSON array, no markdown, no backticks, no explanation.`;
           throw new Error(errData.detail?.message || `ElevenLabs error ${res.status}`);
         }
 
-        audioChunks.push(await res.blob());
+        const blob = await res.blob();
+        audioChunks.push(blob);
+        audioChunkData.push({ blob, speaker: turn.speaker });
       }
 
       progressEl.textContent = 'Merging audio...';
@@ -1208,6 +1213,96 @@ Return ONLY the JSON array, no markdown, no backticks, no explanation.`;
     a.download = `${safeName}.mp3`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function downloadDiarized() {
+    if (!audioChunkData.length) return;
+    const btn = document.getElementById('downloadDiarizedBtn');
+    btn.disabled = true;
+    btn.textContent = 'Encoding…';
+
+    try {
+      const audioCtx = new AudioContext();
+
+      // Decode all MP3 chunks in order
+      const decoded = await Promise.all(
+        audioChunkData.map(async ({ blob, speaker }) => {
+          const ab = await blob.arrayBuffer();
+          const audioBuffer = await audioCtx.decodeAudioData(ab);
+          return { audioBuffer, speaker };
+        })
+      );
+
+      const sampleRate = decoded[0].audioBuffer.sampleRate;
+      const totalSamples = decoded.reduce((s, { audioBuffer }) => s + audioBuffer.length, 0);
+
+      // Stereo: left = Speaker A, right = Speaker B
+      const output = audioCtx.createBuffer(2, totalSamples, sampleRate);
+      const left = output.getChannelData(0);
+      const right = output.getChannelData(1);
+
+      let offset = 0;
+      for (const { audioBuffer, speaker } of decoded) {
+        // Mix down to mono if source is multi-channel
+        const src = audioBuffer.getChannelData(0);
+        const target = speaker === 'A' ? left : right;
+        target.set(src, offset);
+        offset += audioBuffer.length;
+      }
+
+      audioCtx.close();
+
+      const wav = encodeWav(output);
+      const topic = document.getElementById('topic').value.trim() || 'conversation';
+      const safeName = topic.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_').substring(0, 40);
+      const url = URL.createObjectURL(wav);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}_diarized.wav`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      showToast('Diarized export failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Download Diarized WAV';
+    }
+  }
+
+  function encodeWav(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const bytesPerSample = 2; // 16-bit PCM
+    const blockAlign = numChannels * bytesPerSample;
+    const dataLen = buffer.length * blockAlign;
+    const wav = new ArrayBuffer(44 + dataLen);
+    const v = new DataView(wav);
+    const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+
+    str(0, 'RIFF');
+    v.setUint32(4, 36 + dataLen, true);
+    str(8, 'WAVE');
+    str(12, 'fmt ');
+    v.setUint32(16, 16, true);          // subchunk size
+    v.setUint16(20, 1, true);           // PCM format
+    v.setUint16(22, numChannels, true);
+    v.setUint32(24, sampleRate, true);
+    v.setUint32(28, sampleRate * blockAlign, true);
+    v.setUint16(32, blockAlign, true);
+    v.setUint16(34, 16, true);          // bit depth
+    str(36, 'data');
+    v.setUint32(40, dataLen, true);
+
+    let off = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let ch = 0; ch < numChannels; ch++) {
+        const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+        v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        off += 2;
+      }
+    }
+
+    return new Blob([wav], { type: 'audio/wav' });
   }
 
   // ══════════════════════════════════════
