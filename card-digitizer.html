@@ -345,6 +345,10 @@ description: Digitize index cards from photos — auto-detects card boundaries, 
   </div>
 
   <div id="tab-saved" style="display:none">
+    <div id="export-bar" style="display:none;margin-top:.75rem;gap:.5rem;justify-content:flex-end">
+      <button class="btn-ghost" id="export-csv-btn">Export CSV</button>
+      <button class="btn-ghost" id="export-zip-btn">Download images (ZIP)</button>
+    </div>
     <div class="gallery" id="gallery">
       <div class="empty" style="grid-column:1/-1">No cards saved yet.</div>
     </div>
@@ -354,6 +358,7 @@ description: Digitize index cards from photos — auto-detects card boundaries, 
 <div id="cv-toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/sql.js@1.12.0/dist/sql-wasm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1162,12 +1167,16 @@ function loadSaved() {
 }
 
 function renderGallery() {
-  const gallery = document.getElementById('gallery');
+  const gallery   = document.getElementById('gallery');
+  const exportBar = document.getElementById('export-bar');
 
   if (!saved.length) {
-    gallery.innerHTML = '<div class="empty" style="grid-column:1/-1">No cards saved yet.</div>';
+    gallery.innerHTML    = '<div class="empty" style="grid-column:1/-1">No cards saved yet.</div>';
+    exportBar.style.display = 'none';
     return;
   }
+
+  exportBar.style.display = 'flex';
 
   gallery.innerHTML = '';
   saved.forEach(card => {
@@ -1266,6 +1275,69 @@ document.getElementById('flush-btn').addEventListener('click', () => {
   localStorage.removeItem(PENDING_KEY);
   renderReview();
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Export
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function exportCSV() {
+  const cards = dbListCards();
+  if (!cards.length) { alert('No saved cards to export.'); return; }
+
+  const cols = ['id','text','tags','created_at','box_x','box_y','box_w','box_h'];
+  const csvEsc = v => {
+    const s = String(v ?? '');
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+  };
+  const rows = [cols.join(',')];
+  for (const c of cards) {
+    rows.push([
+      csvEsc(c.id), csvEsc(c.text), csvEsc((c.tags||[]).join(';')),
+      csvEsc(c.created_at), csvEsc(c.box_x), csvEsc(c.box_y),
+      csvEsc(c.box_w), csvEsc(c.box_h),
+    ].join(','));
+  }
+
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `cards-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function downloadImagesZip() {
+  const cards = dbListCards();
+  if (!cards.length) { alert('No saved cards to export.'); return; }
+
+  const btn = document.getElementById('export-zip-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Building ZIP…';
+
+  try {
+    const zip = new JSZip();
+    for (const card of cards) {
+      const dataURL = await idbGet(card.id);
+      if (!dataURL) continue;
+      const [meta, b64] = dataURL.split(',');
+      const ext  = (meta.match(/image\/(\w+)/) || ['','jpg'])[1];
+      const name = `${card.id}.${ext}`;
+      zip.file(name, b64, { base64: true });
+    }
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `card-images-${new Date().toISOString().slice(0,10)}.zip`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Download images (ZIP)';
+  }
+}
+
+document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
+document.getElementById('export-zip-btn').addEventListener('click', downloadImagesZip);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Init
