@@ -303,6 +303,9 @@ description: Digitize index cards from photos — auto-detects card boundaries, 
   <span style="font-size:1.4rem">📇</span>
   <h1>Card Digitizer</h1>
   <button class="btn-ghost" id="flush-btn" style="margin-left:auto;font-size:.8rem">Clear pending</button>
+  <button class="btn-ghost" id="backup-btn" style="font-size:.8rem">Backup</button>
+  <button class="btn-ghost" id="restore-btn" style="font-size:.8rem">Restore</button>
+  <input type="file" id="restore-file-input" accept="application/json" style="display:none">
 </header>
 
 <main>
@@ -1274,6 +1277,73 @@ document.getElementById('flush-btn').addEventListener('click', () => {
   pending = [];
   localStorage.removeItem(PENDING_KEY);
   renderReview();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Backup / Restore
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function backupAll() {
+  const btn = document.getElementById('backup-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Backing up…';
+  try {
+    const sqldb = localStorage.getItem(DB_KEY) || '';
+    const images = await new Promise((res, rej) => {
+      const req = IDB.transaction('images').objectStore('images').getAll();
+      req.onsuccess = e => res(e.target.result);
+      req.onerror   = e => rej(e.target.error);
+    });
+    const blob = new Blob(
+      [JSON.stringify({ sqldb, images })],
+      { type: 'application/json' }
+    );
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `card-digitizer-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Backup';
+  }
+}
+
+async function restoreAll(file) {
+  const btn = document.getElementById('restore-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Restoring…';
+  try {
+    const { sqldb, images } = JSON.parse(await file.text());
+    if (sqldb) localStorage.setItem(DB_KEY, sqldb);
+    if (images?.length) {
+      await new Promise((res, rej) => {
+        const tx    = IDB.transaction('images', 'readwrite');
+        const store = tx.objectStore('images');
+        images.forEach(item => store.put(item));
+        tx.oncomplete = res;
+        tx.onerror    = e => rej(e.target.error);
+      });
+    }
+    await initDB();
+    loadSaved();
+    renderReview();
+    alert(`Restored ${images?.length ?? 0} images and database.`);
+  } catch (err) {
+    alert('Restore failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Restore';
+  }
+}
+
+document.getElementById('backup-btn').addEventListener('click', backupAll);
+document.getElementById('restore-btn').addEventListener('click', () =>
+  document.getElementById('restore-file-input').click()
+);
+document.getElementById('restore-file-input').addEventListener('change', e => {
+  if (e.target.files[0]) restoreAll(e.target.files[0]);
+  e.target.value = '';
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
